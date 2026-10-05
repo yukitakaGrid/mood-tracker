@@ -4,7 +4,7 @@ const OWNER = 'yukitakaGrid';
 const REPO = 'shima-inbox';
 const DIR = 'mood';
 const VIA = 'mood-app';
-const APP_VERSION = '2026-10-05 v7';
+const APP_VERSION = '2026-10-06 v8';
 
 const WORDS = {
   neutral: ['充足', '冷静', '穏やか', '無関心', '疲弊'],
@@ -26,7 +26,7 @@ const INFLUENCES = [
 ];
 
 const $ = (id) => document.getElementById(id);
-const state = { valence: 0, arousal: 0, labels: new Set(), influences: new Set(), arousalInfluences: new Set(), showAll: false, prev: 'step1' };
+const state = { valence: 0, arousal: 0, labels: new Set(), influences: new Set(), arousalInfluences: new Set(), showAll: false, tired: null, prev: 'step1' };
 
 /* ---------- 色と円 ---------- */
 const PAL = {
@@ -272,6 +272,18 @@ function renderInfluences() {
   renderChipGroups($('arousal-influences'), [AROUSAL_INFLUENCES], state.arousalInfluences);
 }
 
+/* ---------- 今日一日のしんどさ（0〜10・任意）。目盛りの意味は task_manager の docs/ノウハウ/しんどさの目盛り.md ---------- */
+const TIRED_TEXT = { 0: 'しんどくない。頭も体も軽い', 2: '少し疲れている。気にならない', 4: '疲れは感じるが、普通に動けて、考えもまとまる', 6: '進みが重い。切り替えや始めるのがつらい', 8: '考えがまとまらず、ミスが出る。休みたい', 10: '限界。何もできない' };
+const TIRED_NONE = '入力しない（スライダーを動かすと記録します）';
+function tiredText(n) {
+  if (TIRED_TEXT[n] !== undefined) return `${n}　${TIRED_TEXT[n]}`;
+  return `${n}　${TIRED_TEXT[n - 1]} と ${TIRED_TEXT[n + 1]} の間`;
+}
+function renderTired() {
+  $('tired-label').textContent = state.tired === null ? TIRED_NONE : tiredText(state.tired);
+  $('tired-clear').hidden = state.tired === null;
+}
+
 /* ---------- 時刻と保存 ---------- */
 const pad = (n, w = 2) => String(n).padStart(w, '0');
 function stamp(d) {
@@ -355,6 +367,7 @@ async function finish() {
     arousal_influences: Array.from(state.arousalInfluences),
     via: VIA,
   };
+  if (state.tired !== null) record.tired = state.tired;
   const pending = getPending();
   pending.push({ name: stamp(d), record });
   if (!setPending(pending)) { $('result-title').textContent = '保存できませんでした'; $('result-detail').textContent = 'この端末の保存領域が使えません。'; show('result'); return; }
@@ -372,8 +385,10 @@ async function finish() {
 }
 
 function reset() {
-  state.valence = 0; state.arousal = 0; state.labels = new Set(); state.influences = new Set(); state.arousalInfluences = new Set(); state.showAll = false;
+  state.valence = 0; state.arousal = 0; state.labels = new Set(); state.influences = new Set(); state.arousalInfluences = new Set(); state.showAll = false; state.tired = null;
   $('valence').value = 0;
+  $('tired').value = 0;
+  renderTired();
   $('arousal').value = 0;
   applyOrb();
   show('step1');
@@ -395,6 +410,8 @@ function init() {
   ar.addEventListener('input', (e) => { state.arousal = Number(e.target.value); applyOrb(); Haptic.update(); });
   ar.addEventListener('pointerdown', () => Haptic.start());
   ['pointerup', 'pointercancel', 'blur', 'change'].forEach((ev) => ar.addEventListener(ev, () => Haptic.stop()));
+  $('tired').addEventListener('input', (e) => { state.tired = Number(e.target.value); renderTired(); });
+  $('tired-clear').addEventListener('click', () => { state.tired = null; $('tired').value = 0; renderTired(); });
   $('haptic-test').addEventListener('click', () => Haptic.test());
   $('haptic').addEventListener('change', (e) => { Haptic.enabled = e.target.checked; store.set('mood.haptic', e.target.checked ? '1' : '0'); });
   $('next1').addEventListener('click', () => { state.labels = new Set(); state.influences = new Set(); state.arousalInfluences = new Set(); state.showAll = false; renderLabels(); show('step2'); });

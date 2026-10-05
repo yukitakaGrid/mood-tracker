@@ -52,6 +52,11 @@
     <div id="influences"></div>
     <h2 class="q">興奮・落ち着きに影響するものはどれですか?(複数可)</h2>
     <div id="arousal-influences"></div>
+    <h2 class="q">今日一日のしんどさ（頭や体の疲れ・任意）</h2>
+    <p id="tired-label" class="arousal-label">入力しない（スライダーを動かすと記録します）</p>
+    <input id="tired" type="range" min="0" max="10" step="1" value="0" aria-label="今日一日のしんどさ（0は軽い、10は限界）">
+    <div class="ends"><span>0 しんどくない</span><span>10 限界</span></div>
+    <button id="tired-clear" class="secondary" type="button" hidden>入力しない</button>
     <button id="done" class="primary">完了</button>
   </section>
 
