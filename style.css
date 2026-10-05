@@ -19,14 +19,18 @@ body{
 .round[hidden]{display:flex;visibility:hidden}
 .step{flex:1;display:flex;flex-direction:column}
 .step[hidden]{display:none}
-.ask{font-size:26px;line-height:1.5;font-weight:700;text-align:center;margin:28px 0 0}
+.ask{font-size:24px;line-height:1.45;font-weight:700;text-align:center;margin:14px 0 0}
 .orb-wrap{display:flex;justify-content:center;margin:12px 0}
-.orb-wrap svg{width:min(62vw,260px);height:min(62vw,260px)}
+.orb-wrap svg{width:min(52vw,226px);height:min(52vw,226px)}
 .orb-wrap.small svg{width:min(34vw,130px);height:min(34vw,130px)}
-.valence-label{font-size:26px;font-weight:700;text-align:center;margin:6px 0 18px}
+.valence-label{font-size:24px;font-weight:700;text-align:center;margin:4px 0 2px}
+.arousal-label{font-size:17px;font-weight:600;text-align:center;margin:0 0 12px;opacity:.85}
 .valence-label.small{font-size:22px;margin:0 0 16px}
 .slider-wrap{margin-top:auto}
-.ends{display:flex;justify-content:space-between;font-size:13px;opacity:.7;margin:8px 4px 0}
+.break{flex-basis:100%;height:2px;border-bottom:1px solid rgba(0,0,0,.08);margin:2px 0}
+.check{display:flex;gap:10px;align-items:center;font-size:15px;margin:14px 0 4px}
+.check input{width:22px;height:22px}
+.ends{display:flex;justify-content:space-between;font-size:12.5px;opacity:.7;margin:6px 4px 12px}
 input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:44px;border-radius:22px;
   background:rgba(120,130,140,.22);margin:0;touch-action:none}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:40px;height:40px;border-radius:50%;background:#fff;
@@ -51,4 +55,16 @@ input[type=range]::-moz-range-thumb{width:40px;height:40px;border-radius:50%;bac
 .row .primary{flex:1;margin-top:0;height:46px;font-size:15px}
 #orb{animation:spin 90s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-@media (prefers-reduced-motion:reduce){#orb{animation:none}}
+/* 覚醒度は動きと密度で見せる：落ち着き＝ゆっくり呼吸／高ぶり＝細かく速く震える */
+svg[data-motion=calm] path{transform-box:fill-box;transform-origin:center;
+  animation:breathe var(--dur,6s) ease-in-out infinite;animation-delay:calc(var(--i,0) * -0.45s)}
+@keyframes breathe{0%,100%{transform:scale(calc(1 - var(--amp,.04)))}50%{transform:scale(calc(1 + var(--amp,.04)))}}
+svg[data-motion=aroused] path{transform-box:fill-box;transform-origin:center;
+  animation:tremble var(--dur,.15s) steps(1,end) infinite;animation-delay:calc(var(--i,0) * -0.017s)}
+@keyframes tremble{
+  0%{transform:translate(0,0) scale(1)}
+  20%{transform:translate(calc(var(--j,.6) * 1px),calc(var(--j,.6) * -.7px)) scale(calc(1 + var(--s,.008)))}
+  40%{transform:translate(calc(var(--j,.6) * -.8px),calc(var(--j,.6) * .5px)) scale(calc(1 - var(--s,.008)))}
+  60%{transform:translate(calc(var(--j,.6) * .4px),calc(var(--j,.6) * .9px)) scale(calc(1 + var(--s,.008) * .6))}
+  80%{transform:translate(calc(var(--j,.6) * -.6px),calc(var(--j,.6) * -.4px)) scale(calc(1 - var(--s,.008) * .6))}}
+@media (prefers-reduced-motion:reduce){#orb{animation:none}svg[data-motion] path{animation:none}}
