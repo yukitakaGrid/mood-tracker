@@ -17,7 +17,7 @@ const INFLUENCES = [
 ];
 
 const $ = (id) => document.getElementById(id);
-const state = { valence: 0, labels: new Set(), influence: null, showAll: false, prev: 'step1' };
+const state = { valence: 0, labels: new Set(), influences: new Set(), showAll: false, prev: 'step1' };
 
 /* ---------- 色と円 ---------- */
 const PAL = {
@@ -135,10 +135,10 @@ function renderInfluences() {
       b.type = 'button';
       b.className = 'chip';
       b.textContent = w;
-      b.setAttribute('aria-pressed', state.influence === w ? 'true' : 'false');
+      b.setAttribute('aria-pressed', state.influences.has(w) ? 'true' : 'false');
       b.addEventListener('click', () => {
-        state.influence = state.influence === w ? null : w;
-        box.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', c.textContent === state.influence ? 'true' : 'false'));
+        if (state.influences.has(w)) state.influences.delete(w); else state.influences.add(w);
+        b.setAttribute('aria-pressed', state.influences.has(w) ? 'true' : 'false');
       });
       row.appendChild(b);
     });
@@ -224,7 +224,7 @@ async function finish() {
     at: isoLocal(d),
     valence: Math.round(state.valence) / 100,
     labels: Array.from(state.labels),
-    influence: state.influence,
+    influences: Array.from(state.influences),
     via: VIA,
   };
   const pending = getPending();
@@ -244,7 +244,7 @@ async function finish() {
 }
 
 function reset() {
-  state.valence = 0; state.labels = new Set(); state.influence = null; state.showAll = false;
+  state.valence = 0; state.labels = new Set(); state.influences = new Set(); state.showAll = false;
   $('valence').value = 0;
   applyValence();
   show('step1');
@@ -261,7 +261,7 @@ function renderSettings() {
 /* ---------- 起動 ---------- */
 function init() {
   $('valence').addEventListener('input', (e) => { state.valence = Number(e.target.value); applyValence(); });
-  $('next1').addEventListener('click', () => { state.labels = new Set(); state.showAll = false; renderLabels(); show('step2'); });
+  $('next1').addEventListener('click', () => { state.labels = new Set(); state.influences = new Set(); state.showAll = false; renderLabels(); show('step2'); });
   $('more').addEventListener('click', () => { state.showAll = true; renderLabels(); });
   $('next2').addEventListener('click', () => { renderInfluences(); show('step3'); });
   $('done').addEventListener('click', finish);
