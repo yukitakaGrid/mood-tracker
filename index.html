@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#dce4e4">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="心の記録">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<title>心の記録</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="app">
+  <header class="bar">
+    <button id="back" class="round" aria-label="戻る" hidden>‹</button>
+    <h1 id="title">感情</h1>
+    <button id="gear" class="round" aria-label="設定">⚙</button>
+  </header>
+
+  <section id="step1" class="step" aria-live="polite">
+    <p class="ask">今現在どのように<br>感じているかを<br>選択してください</p>
+    <div class="orb-wrap"><svg id="orb" viewBox="-100 -100 200 200" aria-hidden="true"></svg></div>
+    <p id="valence-label" class="valence-label">どちらとも言えない</p>
+    <div class="slider-wrap">
+      <input id="valence" type="range" min="-100" max="100" step="1" value="0" aria-label="感情（非常に不快から非常に快適）">
+      <div class="ends"><span>非常に不快</span><span>非常に快適</span></div>
+    </div>
+    <button id="next1" class="primary">次へ</button>
+  </section>
+
+  <section id="step2" class="step" hidden>
+    <div class="orb-wrap small"><svg id="orb2" viewBox="-100 -100 200 200" aria-hidden="true"></svg></div>
+    <p id="valence-label2" class="valence-label small"></p>
+    <h2 class="q">これにふさわしいものはどれですか?(複数可)</h2>
+    <div id="labels" class="chips"></div>
+    <button id="more" class="more">さらに表示 ›</button>
+    <button id="next2" class="primary">次へ</button>
+  </section>
+
+  <section id="step3" class="step" hidden>
+    <div class="orb-wrap small"><svg id="orb3" viewBox="-100 -100 200 200" aria-hidden="true"></svg></div>
+    <p id="valence-label3" class="valence-label small"></p>
+    <h2 class="q">一番大きく影響するものはどれですか?</h2>
+    <div id="influences"></div>
+    <button id="done" class="primary">完了</button>
+  </section>
+
+  <section id="result" class="step" hidden>
+    <p id="result-title" class="ask">保存しました</p>
+    <p id="result-detail" class="detail"></p>
+    <button id="again" class="primary">もう一度記録する</button>
+  </section>
+
+  <section id="settings" class="step" hidden>
+    <h2 class="q">設定</h2>
+    <p class="detail">記録の送り先：<span id="dest"></span></p>
+    <label class="field">GitHub のトークン
+      <input id="token" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…">
+    </label>
+    <p class="detail small" id="token-state"></p>
+    <div class="row">
+      <button id="save-token" class="primary">トークンを保存</button>
+      <button id="clear-token" class="secondary">削除</button>
+    </div>
+    <p class="detail small" id="pending-state"></p>
+    <button id="flush" class="secondary">未送信を今すぐ送る</button>
+    <p class="detail small">トークンはこの端末のブラウザの中にだけ保存されます。権限は、送り先のリポジトリの「Contents の書き込み」だけにしてください。</p>
+    <button id="close-settings" class="primary">閉じる</button>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
