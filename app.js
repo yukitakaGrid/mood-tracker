@@ -4,6 +4,7 @@ const OWNER = 'yukitakaGrid';
 const REPO = 'shima-inbox';
 const DIR = 'mood';
 const VIA = 'mood-app';
+const APP_VERSION = '2026-10-05 v6';
 
 const WORDS = {
   neutral: ['充足', '冷静', '穏やか', '無関心', '疲弊'],
@@ -374,6 +375,7 @@ function reset() {
 
 /* ---------- 設定 ---------- */
 function renderSettings() {
+  $('ver').textContent = APP_VERSION;
   $('dest').textContent = `${OWNER}/${REPO}（非公開）の ${DIR}/`;
   $('token-state').textContent = getToken() ? 'トークン：設定済み（中身は表示しません）' : 'トークン：未設定';
   const n = getPending().length;

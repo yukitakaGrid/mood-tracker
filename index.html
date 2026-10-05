@@ -78,6 +78,8 @@
     <p class="detail small" id="pending-state"></p>
     <button id="flush" class="secondary">未送信を今すぐ送る</button>
     <p class="detail small">トークンはこの端末のブラウザの中にだけ保存されます。権限は、送り先のリポジトリの「Contents の書き込み」だけにしてください。</p>
+    <p class="detail small">画面の版：<span id="ver"></span>（空欄のままなら、古い画面の記憶が残っています）</p>
+    <button id="reset-cache" class="secondary" onclick="(async()=>{try{for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister();for(const k of await caches.keys())await caches.delete(k);}catch(e){}location.reload();})()">最新版にする（古い画面の記憶を消して読み込み直す）</button>
     <button id="close-settings" class="primary">閉じる</button>
   </section>
 </main>
