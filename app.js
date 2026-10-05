@@ -1,5 +1,5 @@
 'use strict';
-/* 心の記録（仮）：iPhone の「心の状態」と同じ3ステップ。記録は GitHub の API で OWNER/REPO の DIR/ に1回1ファイルで置く。 */
+/* ムードトラッカー：iPhone の「心の状態」と同じ3ステップ。記録は GitHub の API で OWNER/REPO の DIR/ に1回1ファイルで置く。 */
 const OWNER = 'yukitakaGrid';
 const REPO = 'shima-inbox';
 const DIR = 'mood';
@@ -184,7 +184,7 @@ async function putFile(name, record, token) {
         'X-GitHub-Api-Version': '2022-11-28',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message: `心の記録 ${fname}`, content: b64(JSON.stringify(record, null, 2) + '\n') }),
+      body: JSON.stringify({ message: `ムードトラッカー ${fname}`, content: b64(JSON.stringify(record, null, 2) + '\n') }),
     });
     if (res.status === 200 || res.status === 201) return { ok: true };
     if (res.status === 422) continue; // 同じ名前がある → 名前を変えて再挑戦

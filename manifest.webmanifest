@@ -1,6 +1,6 @@
 {
-  "name": "心の記録",
-  "short_name": "心の記録",
+  "name": "ムードトラッカー",
+  "short_name": "ムードトラッカー",
   "description": "今の気持ちを3ステップで記録する",
   "lang": "ja",
   "start_url": "./",
