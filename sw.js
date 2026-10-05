@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE = `mood-app-${VERSION}`;
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 

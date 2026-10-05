@@ -15,8 +15,9 @@ const AROUSAL_WORDS = {
   high: ['興奮', 'ワクワク', '熱中', '集中', '緊張', '焦り', '苛立ち', '落ち着かない'],
   low: ['穏やか', 'くつろぎ', '静か', 'ぼんやり', '眠い', 'だるい', '無気力', '疲れ'],
 };
-/* 覚醒度は体の状態に引っ張られやすいので、体・環境の側の項目を先頭に置く */
-const BODY_INFLUENCES = ['睡眠', 'カフェイン', '食事', '運動', '音', '光', '人混み', '気圧・天気', '締切', '画面を見ていた時間'];
+/* 興奮・落ち着きに影響するもの：覚醒度は体の状態に引っ張られやすいので、体・環境の項目に薬を足す */
+const AROUSAL_INFLUENCES = ['睡眠', 'カフェイン', '食事', '運動', '音', '光', '人混み', '気圧・天気', '締切', '画面を見ていた時間', '薬'];
+/* 快・不快に影響するもの（iPhone の「心の状態」と同じ） */
 const INFLUENCES = [
   ['健康', 'フィットネス', 'セルフケア', '趣味', 'アイデンティティ', 'スピリチュアル'],
   ['コミュニティ', '家族', '友達', 'パートナー', '交際'],
@@ -24,7 +25,7 @@ const INFLUENCES = [
 ];
 
 const $ = (id) => document.getElementById(id);
-const state = { valence: 0, arousal: 0, labels: new Set(), influences: new Set(), showAll: false, prev: 'step1' };
+const state = { valence: 0, arousal: 0, labels: new Set(), influences: new Set(), arousalInfluences: new Set(), showAll: false, prev: 'step1' };
 
 /* ---------- 色と円 ---------- */
 const PAL = {
@@ -153,39 +154,47 @@ function applyOrb() {
 }
 
 /* ---------- 振動 ----------
- * 高ぶりのスライダーを押さえている間、振動のリズムが覚醒度に合わせて速くなる（落ち着き＝ゆっくり／高ぶり＝速い）。
- * Android は navigator.vibrate。iPhone の Safari は Vibration API が無いので、スイッチ部品のタップ感を使う（iOS 17.4 以降。効かないことがある）。 */
+ * 高ぶりのスライダーを動かしている間、振動の間隔が覚醒度に合わせて短くなる（落ち着き＝ゆっくり／高ぶり＝速い）。
+ * Android は navigator.vibrate。iPhone の Safari には Vibration API が無いので、スイッチ部品のタップ感を使う（iOS 17.4 以降）。
+ * 2026-10-05 の初版はタイマーで鳴らして、iPhone で鳴らなかった。ユーザーの操作（押す・動かす）の中で鳴らす形に変えた。 */
 const Haptic = {
   enabled: true,
-  timer: null,
+  last: 0,
   label: null,
   setup() {
     this.enabled = store.get('mood.haptic', '1') !== '0';
-    const box = document.createElement('div');
-    box.setAttribute('aria-hidden', 'true');
-    box.style.cssText = 'position:fixed;left:-100px;top:-100px;width:1px;height:1px;opacity:0;pointer-events:none';
-    box.innerHTML = '<input type="checkbox" id="hap-sw" switch tabindex="-1"><label for="hap-sw" id="hap-lb"></label>';
-    document.body.appendChild(box);
-    this.label = document.getElementById('hap-lb');
+    const label = document.createElement('label');
+    label.setAttribute('aria-hidden', 'true');
+    label.style.display = 'none';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.setAttribute('switch', '');
+    label.appendChild(input);
+    document.body.appendChild(label);
+    this.label = label;
   },
   interval() { // 落ち着き(-1)=900ms → 中央≒270ms → 高ぶり(+1)=80ms
     const a = state.arousal / 100;
     return Math.round(900 * Math.pow(80 / 900, (a + 1) / 2));
   },
-  tick() {
-    if (!this.enabled) return;
+  tick(force) {
+    if (!this.enabled && !force) return;
     try {
       if (typeof navigator.vibrate === 'function') navigator.vibrate(Math.max(8, Math.min(30, this.interval() / 3)));
       else if (this.label) this.label.click();
     } catch (e) { /* 何もしない */ }
   },
-  loop() {
-    this.tick();
-    this.timer = setTimeout(() => this.loop(), this.interval());
+  start() { this.last = performance.now(); this.tick(); },           // 押した瞬間（ユーザー操作の中）
+  update() {                                                          // 動かしている間（間隔は覚醒度で変わる）
+    const now = performance.now();
+    if (now - this.last >= this.interval()) { this.last = now; this.tick(); }
   },
-  start() { this.stop(); if (this.enabled) this.loop(); },
-  update() { /* 次の tick から新しい間隔になる */ },
-  stop() { if (this.timer) { clearTimeout(this.timer); this.timer = null; } },
+  stop() { /* 動かすときだけ鳴らすので、止める処理は要らない */ },
+  test() {                                                            // 設定の「振動を試す」：1回、そのあと間隔を縮めながら
+    this.tick(true);
+    let t = 0;
+    [700, 560, 420, 300, 210, 140, 100, 80, 80, 80].forEach((gap) => { t += gap; setTimeout(() => this.tick(true), t); });
+  },
 };
 
 /* ---------- 画面 ---------- */
@@ -231,10 +240,9 @@ function renderLabels() {
   $('more').hidden = state.showAll;
 }
 
-function renderInfluences() {
-  const box = $('influences');
+function renderChipGroups(box, groups, set) {
   box.innerHTML = '';
-  [BODY_INFLUENCES].concat(INFLUENCES).forEach((g) => {
+  groups.forEach((g) => {
     const row = document.createElement('div');
     row.className = 'group';
     g.forEach((w) => {
@@ -242,15 +250,19 @@ function renderInfluences() {
       b.type = 'button';
       b.className = 'chip';
       b.textContent = w;
-      b.setAttribute('aria-pressed', state.influences.has(w) ? 'true' : 'false');
+      b.setAttribute('aria-pressed', set.has(w) ? 'true' : 'false');
       b.addEventListener('click', () => {
-        if (state.influences.has(w)) state.influences.delete(w); else state.influences.add(w);
-        b.setAttribute('aria-pressed', state.influences.has(w) ? 'true' : 'false');
+        if (set.has(w)) set.delete(w); else set.add(w);
+        b.setAttribute('aria-pressed', set.has(w) ? 'true' : 'false');
       });
       row.appendChild(b);
     });
     box.appendChild(row);
   });
+}
+function renderInfluences() {
+  renderChipGroups($('influences'), INFLUENCES, state.influences);
+  renderChipGroups($('arousal-influences'), [AROUSAL_INFLUENCES], state.arousalInfluences);
 }
 
 /* ---------- 時刻と保存 ---------- */
@@ -333,6 +345,7 @@ async function finish() {
     arousal: Math.round(state.arousal) / 100,
     labels: Array.from(state.labels),
     influences: Array.from(state.influences),
+    arousal_influences: Array.from(state.arousalInfluences),
     via: VIA,
   };
   const pending = getPending();
@@ -352,7 +365,7 @@ async function finish() {
 }
 
 function reset() {
-  state.valence = 0; state.arousal = 0; state.labels = new Set(); state.influences = new Set(); state.showAll = false;
+  state.valence = 0; state.arousal = 0; state.labels = new Set(); state.influences = new Set(); state.arousalInfluences = new Set(); state.showAll = false;
   $('valence').value = 0;
   $('arousal').value = 0;
   applyOrb();
@@ -374,8 +387,9 @@ function init() {
   ar.addEventListener('input', (e) => { state.arousal = Number(e.target.value); applyOrb(); Haptic.update(); });
   ar.addEventListener('pointerdown', () => Haptic.start());
   ['pointerup', 'pointercancel', 'blur', 'change'].forEach((ev) => ar.addEventListener(ev, () => Haptic.stop()));
+  $('haptic-test').addEventListener('click', () => Haptic.test());
   $('haptic').addEventListener('change', (e) => { Haptic.enabled = e.target.checked; store.set('mood.haptic', e.target.checked ? '1' : '0'); });
-  $('next1').addEventListener('click', () => { state.labels = new Set(); state.influences = new Set(); state.showAll = false; renderLabels(); show('step2'); });
+  $('next1').addEventListener('click', () => { state.labels = new Set(); state.influences = new Set(); state.arousalInfluences = new Set(); state.showAll = false; renderLabels(); show('step2'); });
   $('more').addEventListener('click', () => { state.showAll = true; renderLabels(); });
   $('next2').addEventListener('click', () => { renderInfluences(); show('step3'); });
   $('done').addEventListener('click', finish);
