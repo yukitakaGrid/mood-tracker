@@ -4,7 +4,7 @@ const OWNER = 'yukitakaGrid';
 const REPO = 'shima-inbox';
 const DIR = 'mood';
 const VIA = 'mood-app';
-const APP_VERSION = '2026-10-05 v6';
+const APP_VERSION = '2026-10-05 v7';
 
 const WORDS = {
   neutral: ['充足', '冷静', '穏やか', '無関心', '疲弊'],
@@ -191,7 +191,13 @@ const Haptic = {
     if (now - this.last >= this.interval()) { this.last = now; this.tick(); }
   },
   stop() { /* 動かすときだけ鳴らすので、止める処理は要らない */ },
+  mode() {
+    const standalone = (window.navigator.standalone === true) || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    const way = typeof navigator.vibrate === 'function' ? 'この端末の振動機能（navigator.vibrate）' : 'スイッチ部品のタップ感（iPhone の方法）';
+    return `押されました。方法：${way}。開き方：${standalone ? 'ホーム画面から' : 'Safari などのブラウザで'}。数回鳴らしています。感じなければ、この端末・この開き方では使えません。`;
+  },
   test() {                                                            // 設定の「振動を試す」：1回、そのあと間隔を縮めながら
+    $('haptic-state').textContent = this.mode();
     this.tick(true);
     let t = 0;
     [700, 560, 420, 300, 210, 140, 100, 80, 80, 80].forEach((gap) => { t += gap; setTimeout(() => this.tick(true), t); });
