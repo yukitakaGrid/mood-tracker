@@ -4,7 +4,9 @@ const OWNER = 'yukitakaGrid';
 const REPO = 'shima-inbox';
 const DIR = 'mood';
 const VIA = 'mood-app';
-const APP_VERSION = '2026-10-06 v8';
+const LAPSE_DIR = 'inattention';
+const LAPSE_KINDS = ['なくした', '落とした', '置き忘れた', '忘れ物をした', 'やり忘れた', '言い忘れた', '聞き逃した', 'ミスをした', '気づかなかった', 'その他'];
+const APP_VERSION = '2026-10-06 v9';
 
 const WORDS = {
   neutral: ['充足', '冷静', '穏やか', '無関心', '疲弊'],
@@ -206,9 +208,9 @@ const Haptic = {
 
 /* ---------- 画面 ---------- */
 function show(id) {
-  ['step1', 'step2', 'step3', 'result', 'settings'].forEach((s) => { $(s).hidden = s !== id; });
-  $('title').textContent = id === 'settings' ? '設定' : id === 'result' ? '記録' : '感情';
-  $('back').hidden = !(id === 'step2' || id === 'step3' || id === 'settings');
+  ['step1', 'step2', 'step3', 'lapse', 'result', 'settings'].forEach((s) => { $(s).hidden = s !== id; });
+  $('title').textContent = id === 'settings' ? '設定' : id === 'result' ? '記録' : id === 'lapse' ? '不注意' : '感情';
+  $('back').hidden = !(id === 'step2' || id === 'step3' || id === 'lapse' || id === 'settings');
   state.cur = id;
   window.scrollTo(0, 0);
 }
@@ -284,6 +286,12 @@ function renderTired() {
   $('tired-clear').hidden = state.tired === null;
 }
 
+/* ---------- 不注意の記録（なくした・忘れた など。LAPSE_DIR に1回1ファイル） ---------- */
+state.lapse = new Set();
+function renderLapse() {
+  renderChipGroups($('lapse-kinds'), [LAPSE_KINDS], state.lapse);
+}
+
 /* ---------- 時刻と保存 ---------- */
 const pad = (n, w = 2) => String(n).padStart(w, '0');
 function stamp(d) {
@@ -310,10 +318,11 @@ const getToken = () => store.get('mood.token', '');
 const getPending = () => { try { return JSON.parse(store.get('mood.pending', '[]')); } catch (e) { return []; } };
 const setPending = (a) => store.set('mood.pending', JSON.stringify(a));
 
-async function putFile(name, record, token) {
+async function putFile(name, record, token, dir) {
+  dir = dir || DIR;
   for (let i = 0; i < 5; i++) {
     const fname = i === 0 ? name : `${name}_${i + 1}`;
-    const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${DIR}/${fname}.json`;
+    const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${dir}/${fname}.json`;
     const res = await fetch(url, {
       method: 'PUT',
       headers: {
@@ -322,7 +331,7 @@ async function putFile(name, record, token) {
         'X-GitHub-Api-Version': '2022-11-28',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message: `ムードトラッカー ${fname}`, content: b64(JSON.stringify(record, null, 2) + '\n') }),
+      body: JSON.stringify({ message: `${dir === DIR ? 'ムードトラッカー' : '不注意の記録'} ${fname}`, content: b64(JSON.stringify(record, null, 2) + '\n') }),
     });
     if (res.status === 200 || res.status === 201) return { ok: true };
     if (res.status === 422) continue; // 同じ名前がある → 名前を変えて再挑戦
@@ -340,7 +349,7 @@ async function flush() {
   let sent = 0;
   while (pending.length) {
     let r;
-    try { r = await putFile(pending[0].name, pending[0].record, token); }
+    try { r = await putFile(pending[0].name, pending[0].record, token, pending[0].dir); }
     catch (e) { return { sent, left: pending.length, reason: 'offline' }; }
     if (!r.ok) return { sent, left: pending.length, reason: (r.status === 401 || r.status === 403 || r.status === 404) ? 'auth' : 'offline' };
     pending.shift();
@@ -384,8 +393,32 @@ async function finish() {
   show('result');
 }
 
+async function finishLapse() {
+  const d = new Date();
+  const record = { at: isoLocal(d), kinds: Array.from(state.lapse), note: $('lapse-note').value.trim(), via: VIA };
+  if (!record.kinds.length && !record.note) {
+    const b = $('save-lapse'); b.textContent = 'どれか選ぶか、ひとこと入れてください';
+    setTimeout(() => { b.textContent = '保存'; }, 2200);
+    return;
+  }
+  const pending = getPending();
+  pending.push({ name: stamp(d), dir: LAPSE_DIR, record });
+  if (!setPending(pending)) { $('result-title').textContent = '保存できませんでした'; $('result-detail').textContent = 'この端末の保存領域が使えません。'; show('result'); return; }
+  $('save-lapse').disabled = true;
+  const r = await flush();
+  $('save-lapse').disabled = false;
+  if (r.left === 0) {
+    $('result-title').textContent = '保存しました';
+    $('result-detail').textContent = `${record.at.slice(0, 16).replace('T', ' ')} の不注意の記録を送りました。`;
+  } else {
+    $('result-title').textContent = '保存待ちです';
+    $('result-detail').textContent = `${REASON[r.reason] || ''}（未送信 ${r.left} 件）`;
+  }
+  show('result');
+}
+
 function reset() {
-  state.valence = 0; state.arousal = 0; state.labels = new Set(); state.influences = new Set(); state.arousalInfluences = new Set(); state.showAll = false; state.tired = null;
+  state.valence = 0; state.arousal = 0; state.labels = new Set(); state.influences = new Set(); state.arousalInfluences = new Set(); state.showAll = false; state.tired = null; state.lapse = new Set(); $('lapse-note').value = '';
   $('valence').value = 0;
   $('tired').value = 0;
   renderTired();
@@ -418,9 +451,12 @@ function init() {
   $('more').addEventListener('click', () => { state.showAll = true; renderLabels(); });
   $('next2').addEventListener('click', () => { renderInfluences(); show('step3'); });
   $('done').addEventListener('click', finish);
+  $('open-lapse').addEventListener('click', () => { state.lapse = new Set(); $('lapse-note').value = ''; renderLapse(); show('lapse'); });
+  $('save-lapse').addEventListener('click', finishLapse);
   $('again').addEventListener('click', reset);
   $('back').addEventListener('click', () => {
-    if (state.cur === 'step3') show('step2');
+    if (state.cur === 'lapse') show('step1');
+    else if (state.cur === 'step3') show('step2');
     else if (state.cur === 'step2') show('step1');
     else show(state.prev);
   });

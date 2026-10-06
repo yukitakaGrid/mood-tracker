@@ -34,6 +34,16 @@
       <div class="ends"><span>非常に落ち着いている</span><span>非常に高ぶっている</span></div>
     </div>
     <button id="next1" class="primary">次へ</button>
+    <button id="open-lapse" class="secondary" type="button">不注意があった（なくした・忘れた など）を記録する</button>
+  </section>
+
+  <section id="lapse" class="step" hidden>
+    <h2 class="q">どんな不注意がありましたか?(複数可)</h2>
+    <div id="lapse-kinds" class="chips"></div>
+    <label class="field">何があったか（任意・ひとこと）
+      <input id="lapse-note" type="text" autocomplete="off" placeholder="例：目薬をなくした／スマホを落とした">
+    </label>
+    <button id="save-lapse" class="primary">保存</button>
   </section>
 
   <section id="step2" class="step" hidden>
